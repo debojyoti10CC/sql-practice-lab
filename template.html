@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SQL Practice Lab</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1d2330;--mut:#5b6474;--acc:#2563eb;--err:#b91c1c;--ok:#15803d;--line:#dde1e8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1420;--card:#171e2e;--ink:#e6e9f0;--mut:#9aa3b5;--acc:#60a5fa;--err:#f87171;--ok:#4ade80;--line:#2a3346}}
+:root[data-theme="dark"]{--bg:#0f1420;--card:#171e2e;--ink:#e6e9f0;--mut:#9aa3b5;--acc:#60a5fa;--err:#f87171;--ok:#4ade80;--line:#2a3346}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,Segoe UI,Arial,sans-serif}
+header{padding:16px;border-bottom:1px solid var(--line);background:var(--card)}
+h1{margin:0 0 4px;font-size:20px}
+h2{font-size:16px;margin:0 0 8px}
+main{display:grid;grid-template-columns:240px minmax(0,1fr);gap:16px;padding:16px;max-width:1280px;margin:auto}
+@media(max-width:820px){main{grid-template-columns:1fr;padding:12px}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+textarea{width:100%;min-height:140px;font:13px/1.4 Consolas,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;resize:vertical}
+button{background:var(--acc);color:#fff;border:1px solid var(--acc);border-radius:7px;padding:6px 11px;cursor:pointer;margin:4px 4px 4px 0;font-size:13px}
+button.alt{background:transparent;color:var(--acc)}
+button.tb{display:block;width:100%;text-align:left;background:transparent;color:var(--acc);border-color:transparent;margin:2px 0;padding:4px 2px}
+.tabs button{background:transparent;color:var(--ink);border-color:var(--line)}
+.tabs button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.scroll{overflow-x:auto;margin-top:8px}
+table{border-collapse:collapse;font-size:13px}
+th,td{border:1px solid var(--line);padding:4px 8px;text-align:left;white-space:nowrap}
+th{background:var(--bg)}
+.err{color:var(--err);font:13px Consolas,monospace;white-space:pre-wrap}
+.ok{color:var(--ok);font-size:13px}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;overflow-x:auto;font:13px/1.4 Consolas,monospace;margin:8px 0;white-space:pre}
+.card{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:10px 0}
+.q{font-weight:500}
+.note{color:var(--mut);font-size:13px}
+.hint{color:var(--mut);font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>SQL Practice Lab</h1>
+  <div class="note">HR, sailors and lab tables. Runs in your browser (SQLite engine). Oracle/MySQL-only syntax is mapped where possible; see notes.</div>
+</header>
+<main>
+<aside class="panel">
+  <h2>Tables</h2>
+  <div id="tables"></div>
+  <button class="alt" id="reset">Reset database</button>
+  <h2 style="margin-top:14px">Notes</h2>
+  <ul class="note" style="padding-left:18px;margin:0">
+    <li>Ctrl+Enter runs the editor.</li>
+    <li>Oracle SYSDATE = date('now').</li>
+    <li>Oracle varchar2 = TEXT here.</li>
+    <li>No Oracle FLASHBACK here. Reset database to undo drops.</li>
+    <li>HR data uses job titles (Stock Clerk, Stock Manager). Assignment ST_CLERK = 'Stock Clerk'; ST_MAN = 'Stock Manager'.</li>
+  </ul>
+</aside>
+<section style="min-width:0">
+  <div class="panel">
+    <h2>Free SQL editor</h2>
+    <textarea id="sql">SELECT e.employee_id, e.first_name, e.last_name, j.job_title, e.salary
+FROM employees e JOIN jobs j USING (job_id)
+ORDER BY e.salary DESC;</textarea>
+    <div><button id="run">Run</button><button class="alt" id="clear">Clear output</button></div>
+    <div id="out"></div>
+  </div>
+  <div class="panel" style="margin-top:16px">
+    <h2>Assignment bank</h2>
+    <div class="note">Read question, try it yourself in editor, then Show answer or Run answer.</div>
+    <div class="tabs" id="tabs" style="margin-top:8px"></div>
+    <div id="bank"></div>
+  </div>
+</section>
+</main>
+
+<script type="text/plain" id="seed"><!--SEED--></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+<script>
+const BANK = [
+{ g: 'A1 Customer (DDL/DML)', items: [
+ { q: 'Create table cust1 and insert Ram Roy (America, cred 8000, mngr 2, income 2000). Other rows are sample values.', a: `DROP TABLE IF EXISTS cust1;
+DROP TABLE IF EXISTS cust_one;
+CREATE TABLE cust1 (cust_id INTEGER, cust_fname TEXT, cust_lname TEXT, territory TEXT, cred_lmt REAL, mngr_id INTEGER, marital_status TEXT, sex TEXT, income REAL);
+INSERT INTO cust1 (cust_id,cust_fname,cust_lname,territory,cred_lmt,mngr_id,marital_status,sex,income) VALUES (1,'Ram','Roy','America',8000,2,'M','M',2000);
+INSERT INTO cust1 (cust_id,cust_fname,cust_lname,territory,cred_lmt,mngr_id,marital_status,sex,income) VALUES (2,'Meg','Sen','Italy',6000,3,'Single','F',3000);
+INSERT INTO cust1 (cust_id,cust_fname,cust_lname,territory,cred_lmt,mngr_id,marital_status,sex,income) VALUES (3,'Asha','Rao','India',5000,1,'Single','F',2500);
+SELECT * FROM cust1;` },
+ { q: 'Add column stay_from_year to cust1. Set it to 2001 for America.', a: `ALTER TABLE cust1 ADD COLUMN stay_from_year INTEGER;
+UPDATE cust1 SET stay_from_year = 2001 WHERE territory = 'America';
+SELECT * FROM cust1;` },
+ { q: 'Display credit limit for America.', a: `SELECT cred_lmt FROM cust1 WHERE territory = 'America';` },
+ { q: 'Show all data for territory Italy.', a: `SELECT * FROM cust1 WHERE territory = 'Italy';` },
+ { q: 'Delete the record for Meg Sen.', a: `DELETE FROM cust1 WHERE cust_fname = 'Meg' AND cust_lname = 'Sen';
+SELECT * FROM cust1;` },
+ { q: 'If territory is India and marital status is Single, set cred_lmt to 7000.', a: `UPDATE cust1 SET cred_lmt = 7000 WHERE territory = 'India' AND marital_status = 'Single';
+SELECT * FROM cust1;` },
+ { q: 'Rename column cust_fname to first_name.', a: `ALTER TABLE cust1 RENAME COLUMN cust_fname TO first_name;
+SELECT * FROM cust1;` },
+ { q: 'Rename column cust_lname to last_name.', a: `ALTER TABLE cust1 RENAME COLUMN cust_lname TO last_name;
+SELECT * FROM cust1;` },
+ { q: 'Drop column income.', a: `ALTER TABLE cust1 DROP COLUMN income;
+SELECT * FROM cust1;` },
+ { q: 'Rename table cust1 to cust_one.', a: `ALTER TABLE cust1 RENAME TO cust_one;
+SELECT * FROM cust_one;` },
+ { q: 'Change cust_id to varchar2(6) (Oracle). SQLite cannot change a column type, so this is only the Oracle form.', a: `-- Oracle: ALTER TABLE cust_one MODIFY cust_id VARCHAR2(6);
+-- SQLite: no ALTER COLUMN TYPE. Write the Oracle line in the exam.` },
+ { q: 'Drop table cust_one (Oracle then flashback to bring it back). SQLite has no recycle bin, so Reset database restores everything.', a: `-- Oracle:
+-- DROP TABLE cust_one;
+-- FLASHBACK TABLE cust_one TO BEFORE DROP;
+SELECT name FROM sqlite_master WHERE type = 'table';` }
+]},
+{ g: 'A2 HR basic queries', items: [
+ { q: 'Display all rows from employees: employee ID, name and job ID.', a: `SELECT employee_id, first_name || ' ' || last_name AS name, job_id FROM employees;` },
+ { q: 'Employees with job Stock Clerk (ST_CLERK) and salary above 3000.', a: `SELECT e.* FROM employees e JOIN jobs j USING (job_id)
+WHERE j.job_title = 'Stock Clerk' AND e.salary > 3000;` },
+ { q: 'Display unique jobs using DISTINCT.', a: `SELECT DISTINCT job_id FROM employees;` },
+ { q: 'Employee ID, name and salary in ascending salary order.', a: `SELECT employee_id, first_name, salary FROM employees ORDER BY salary ASC;` },
+ { q: 'Flat 200 raise: show ID, first name, last name, salary, new salary, percentage increment.', a: `SELECT employee_id, first_name, last_name, salary,
+       salary + 200 AS new_salary,
+       ROUND(200 * 100.0 / salary, 2) AS pct_increment
+FROM employees;` },
+ { q: 'Work experience in years using current date and hire date.', a: `SELECT employee_id, first_name, hire_date,
+       CAST((julianday('now') - julianday(hire_date)) / 365.25 AS INTEGER) AS years_worked
+FROM employees;
+-- Oracle: ROUND((SYSDATE - hire_date) / 365)` },
+ { q: 'Clerk (ST_CLERK) or manager (ST_MAN) using OR.', a: `SELECT e.* FROM employees e JOIN jobs j USING (job_id)
+WHERE j.job_title = 'Stock Clerk' OR j.job_title = 'Stock Manager';` },
+ { q: 'Same as above using IN.', a: `SELECT e.* FROM employees e JOIN jobs j USING (job_id)
+WHERE j.job_title IN ('Stock Clerk', 'Stock Manager');` },
+ { q: 'Same as above using NOT IN (all other job IDs).', a: `SELECT * FROM employees
+WHERE job_id NOT IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17);` },
+ { q: 'Message per employee: "James Sullivan is a stock clerk who has worked at the company for the past 32 years."', a: `SELECT first_name || ' ' || last_name || ' is a ' || LOWER(j.job_title)
+       || ' who has worked at the company for the past '
+       || CAST((julianday('now') - julianday(e.hire_date)) / 365.25 AS INTEGER)
+       || ' years.' AS message
+FROM employees e JOIN jobs j USING (job_id);` },
+ { q: 'From email, show username and domain separately.', a: `SELECT email,
+       SUBSTR(email, 1, INSTR(email, '@') - 1) AS username,
+       SUBSTR(email, INSTR(email, '@') + 1) AS domain
+FROM employees;` }
+]},
+{ g: 'A3 Constraints (DDL)', items: [
+ { q: 'Create dept (dept_id number(3) primary key, dept_name varchar2(10)). Insert ids 90, 69, 100, 110 with names.', a: `DROP TABLE IF EXISTS student;
+DROP TABLE IF EXISTS dept;
+CREATE TABLE dept (dept_id INTEGER PRIMARY KEY, dept_name VARCHAR(10));
+INSERT INTO dept VALUES (90,'Admin'),(69,'Sales'),(100,'Finance'),(110,'IT');
+SELECT * FROM dept;` },
+ { q: 'Create student (stud_id PK, name varchar2(15), marks number(5,2), dept_id FK to dept). Insert 4 students.', a: `CREATE TABLE student (stud_id INTEGER PRIMARY KEY, name VARCHAR(15), marks NUMERIC(5,2), dept_id INTEGER REFERENCES dept(dept_id));
+INSERT INTO student VALUES (1,'Ravi',78.5,90),(2,'Dhruv',65,69),(3,'Asha',91.25,100),(4,'Kabir',55,110);
+SELECT * FROM student;` },
+ { q: 'Insert a student with dept_id 50. Expected: foreign key error.', a: `PRAGMA foreign_keys = ON;
+INSERT INTO student VALUES (5,'Test',40,50);` },
+ { q: 'Display name and marks of students whose name contains at least one d (LIKE).', a: `SELECT name, marks FROM student WHERE name LIKE '%d%';` },
+ { q: 'Create cust100 with constraints (SQLite version of the table spec).', a: `DROP TABLE IF EXISTS cust100;
+CREATE TABLE cust100 (
+ emp_id INTEGER PRIMARY KEY,
+ first_name TEXT CHECK (first_name GLOB '[A-Z]*'),
+ last_name TEXT NOT NULL CHECK (last_name GLOB '[A-Z]*'),
+ e_mail TEXT CHECK (e_mail = upper(e_mail)),
+ ph_no TEXT CHECK (length(ph_no) = 10),
+ hire_date TEXT CHECK (hire_date > '1980-01-01'),
+ job_id TEXT CHECK (substr(job_id,1,2) IN ('FI','AD','IT')),
+ salary REAL CHECK (salary > 4000 AND salary < 25000),
+ mgr_id INTEGER,
+ dept_id INTEGER REFERENCES dept(dept_id)
+);` },
+ { q: 'Add 6 records to cust100.', a: `INSERT INTO cust100 VALUES
+(1,'Ravi','Kumar','RAVI@MAIL.COM','9876543210','1995-03-12','FI_ACCOUNT',6000,NULL,90),
+(2,'Meena','Rao','MEENA@MAIL.COM','9876543211','1996-05-20','AD_PRES',20000,NULL,69),
+(3,'Arjun','Das','ARJUN@MAIL.COM','9876543212','1997-07-01','IT_PROG',9000,NULL,100),
+(4,'Sara','Paul','SARA@MAIL.COM','9876543213','1998-02-14','FI_MGR',12000,NULL,110),
+(5,'Dev','Roy','DEV@MAIL.COM','9876543214','1999-09-09','AD_VP',15000,NULL,90),
+(6,'Riya','Sen','RIYA@MAIL.COM','9876543215','2000-11-30','IT_PROG',7000,NULL,69);
+SELECT * FROM cust100;` },
+ { q: 'Drop column mgr_id.', a: `ALTER TABLE cust100 DROP COLUMN mgr_id;
+SELECT * FROM cust100;` },
+ { q: 'Add column mgr_id, self-referencing. Emp 1-3 report to 6, emp 4-5 to 1, emp 6 to 5.', a: `ALTER TABLE cust100 ADD COLUMN mgr_id INTEGER REFERENCES cust100(emp_id);
+UPDATE cust100 SET mgr_id = CASE emp_id
+  WHEN 1 THEN 6 WHEN 2 THEN 6 WHEN 3 THEN 6
+  WHEN 4 THEN 1 WHEN 5 THEN 1
+  WHEN 6 THEN 5 END;
+SELECT * FROM cust100;` }
+]},
+{ g: 'A4 Sailors (joins, sets)', items: [
+ { q: 'Find sid of sailors who reserved boat b14.', a: `SELECT DISTINCT sid FROM reserve WHERE bid = 'b14';` },
+ { q: 'Select names of sailors for whom rating is present.', a: `SELECT sname, surname FROM sailor WHERE rating IS NOT NULL;` },
+ { q: 'Select names for rating absent.', a: `SELECT sname, surname FROM sailor WHERE rating IS NULL;
+-- Empty result: every sailor has a rating in this data.` },
+ { q: 'Find color of boats reserved by Lubber.', a: `SELECT DISTINCT b.color FROM sailor s
+JOIN reserve r ON s.sid = r.sid
+JOIN boat b ON b.bid = r.bid
+WHERE s.sname = 'Lubber';` },
+ { q: 'Find sailor names who reserved at least one boat.', a: `SELECT DISTINCT s.sname FROM sailor s JOIN reserve r ON s.sid = r.sid;` },
+ { q: 'Ids and names of sailors who reserved two different boats on the same day.', a: `SELECT DISTINCT s.sid, s.sname FROM reserve r1
+JOIN reserve r2 ON r1.sid = r2.sid AND r1.r_day = r2.r_day AND r1.bid <> r2.bid
+JOIN sailor s ON s.sid = r1.sid;` },
+ { q: 'Names of sailors that begin and end with B and have at least 3 characters.', a: `SELECT sname FROM sailor WHERE sname LIKE 'B%B' AND LENGTH(sname) >= 3;` },
+ { q: 'Names of sailors that begin and end with B and have exactly 3 characters.', a: `SELECT sname FROM sailor WHERE sname LIKE 'B_B';` },
+ { q: 'All names (with duplicates) of sailors who reserved a red or green boat.', a: `SELECT s.sname FROM sailor s
+JOIN reserve r ON s.sid = r.sid
+JOIN boat b ON b.bid = r.bid
+WHERE b.color IN ('red', 'green');` },
+ { q: 'Names of sailors who reserved a red or green boat (no duplicates).', a: `SELECT DISTINCT s.sname FROM sailor s
+JOIN reserve r ON s.sid = r.sid
+JOIN boat b ON b.bid = r.bid
+WHERE b.color IN ('red', 'green');` },
+ { q: 'Names of sailors who reserved a red boat and a green boat.', a: `SELECT s.sname FROM sailor s JOIN reserve r ON s.sid = r.sid JOIN boat b ON b.bid = r.bid WHERE b.color = 'red'
+INTERSECT
+SELECT s.sname FROM sailor s JOIN reserve r ON s.sid = r.sid JOIN boat b ON b.bid = r.bid WHERE b.color = 'green';` },
+ { q: 'Names of sailors who reserved a red boat but not a green boat.', a: `SELECT s.sname FROM sailor s JOIN reserve r ON s.sid = r.sid JOIN boat b ON b.bid = r.bid WHERE b.color = 'red'
+EXCEPT
+SELECT s.sname FROM sailor s JOIN reserve r ON s.sid = r.sid JOIN boat b ON b.bid = r.bid WHERE b.color = 'green';` }
+]},
+{ g: 'A5 HR joins, group by', items: [
+ { q: 'Names of employees, department name and job title for each employee.', a: `SELECT e.first_name, e.last_name, d.department_name, j.job_title
+FROM employees e
+LEFT JOIN departments d ON e.department_id = d.department_id
+JOIN jobs j ON e.job_id = j.job_id;` },
+ { q: 'Number of employees in each department, highest count first.', a: `SELECT d.department_name, COUNT(*) AS emp_count
+FROM employees e JOIN departments d ON e.department_id = d.department_id
+GROUP BY d.department_name
+ORDER BY emp_count DESC;` },
+ { q: 'Department name, number of employees and average salary.', a: `SELECT d.department_name, COUNT(e.employee_id) AS emp_count, ROUND(AVG(e.salary), 2) AS avg_salary
+FROM departments d LEFT JOIN employees e ON d.department_id = e.department_id
+GROUP BY d.department_name;` },
+ { q: 'For each department, number of different jobs.', a: `SELECT d.department_name, COUNT(DISTINCT e.job_id) AS job_count
+FROM employees e JOIN departments d ON e.department_id = d.department_id
+GROUP BY d.department_name;` },
+ { q: 'Maximum salary per department, only departments with more than one employee, by department ID.', a: `SELECT department_id, MAX(salary) AS max_salary
+FROM employees
+GROUP BY department_id
+HAVING COUNT(*) > 1
+ORDER BY department_id;` },
+ { q: 'Group employees by first character of first name, descending.', a: `SELECT SUBSTR(first_name, 1, 1) AS initial, COUNT(*) AS cnt
+FROM employees
+WHERE first_name IS NOT NULL
+GROUP BY initial
+ORDER BY initial DESC;` },
+ { q: '7a. Department-wise count of CLERK employees.', a: `SELECT department_id, COUNT(*) AS clerk_count
+FROM employees e JOIN jobs j ON e.job_id = j.job_id
+WHERE j.job_title LIKE '%Clerk%'
+GROUP BY department_id;` },
+ { q: '7b. Same, but only departments with more than 3 CLERKs.', a: `SELECT department_id, COUNT(*) AS clerk_count
+FROM employees e JOIN jobs j ON e.job_id = j.job_id
+WHERE j.job_title LIKE '%Clerk%'
+GROUP BY department_id
+HAVING COUNT(*) > 3;` },
+ { q: 'Employees and their supervisor. No emp table here, so self-join employees.', a: `SELECT e.first_name || ' ' || e.last_name AS employee,
+       m.first_name || ' ' || m.last_name AS supervisor
+FROM employees e
+LEFT JOIN employees m ON e.manager_id = m.employee_id;` },
+ { q: 'Departments that have no employees.', a: `SELECT d.department_id, d.department_name
+FROM departments d
+LEFT JOIN employees e ON d.department_id = e.department_id
+WHERE e.employee_id IS NULL;` }
+]},
+{ g: 'A6 Sub-queries', items: [
+ { q: 'Name, job, salary of employees earning less than employee 106.', a: `SELECT first_name, last_name, job_id, salary FROM employees
+WHERE salary < (SELECT salary FROM employees WHERE employee_id = 106);` },
+ { q: 'Name of employee(s) with second highest salary.', a: `SELECT first_name, last_name, salary FROM employees
+WHERE salary = (SELECT MAX(salary) FROM employees
+                WHERE salary < (SELECT MAX(salary) FROM employees));` },
+ { q: 'First name, last name, salary of sales reps (job 16) earning more than the minimum sales manager (job 15) salary.', a: `SELECT first_name, last_name, salary FROM employees
+WHERE job_id = 16
+  AND salary > (SELECT MIN(salary) FROM employees WHERE job_id = 15);` },
+ { q: 'Employees with same salary as other employees having the same job as employee 121.', a: `SELECT first_name, last_name, job_id, salary FROM employees
+WHERE salary IN (SELECT salary FROM employees
+                 WHERE job_id = (SELECT job_id FROM employees WHERE employee_id = 121)
+                   AND employee_id <> 121);` },
+ { q: 'Employee details with salary less than the highest ST_MAN (Stock Manager, job 19) salary.', a: `SELECT * FROM employees
+WHERE salary < (SELECT MAX(salary) FROM employees WHERE job_id = 19);` },
+ { q: 'Employee whose salary equals the minimum salary in the Accounting department.', a: `SELECT * FROM employees
+WHERE salary = (SELECT MIN(salary) FROM employees
+                WHERE department_id = (SELECT department_id FROM departments
+                                       WHERE department_name = 'Accounting'));` }
+]}
+];
+
+let db = null;
+const $ = s => document.querySelector(s);
+const esc = v => v === null ? 'NULL' : String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function table(r) {
+  return `<div class="scroll"><table><thead><tr>${r.columns.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${r.values.map(row => `<tr>${row.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+
+function runSql(sql) {
+  try {
+    const res = db.exec(sql);
+    if (!res.length) return `<div class="ok">OK. Rows changed: ${db.getRowsModified()}</div>`;
+    return res.map(table).join('');
+  } catch (e) {
+    return `<div class="err">${esc(e.message)}</div>`;
+  }
+}
+
+function renderTables() {
+  const names = db.exec("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name");
+  const list = names.length ? names[0].values.map(r => r[0]) : [];
+  $('#tables').innerHTML = list.map(n => `<button class="tb" data-t="${esc(n)}">${esc(n)}</button>`).join('');
+}
+
+function boot() {
+  db = new SQL.Database();
+  db.exec($('#seed').textContent);
+  db.exec('PRAGMA foreign_keys = ON');
+  renderTables();
+}
+
+let current = 0;
+function renderBank() {
+  $('#tabs').innerHTML = BANK.map((g, i) => `<button class="${i === current ? 'on' : ''}" data-g="${i}">${esc(g.g)}</button>`).join('');
+  const g = BANK[current];
+  $('#bank').innerHTML = g.items.map((it, i) => `
+    <div class="card" data-g="${current}" data-i="${i}">
+      <div class="q">${current + 1}.${i + 1} ${esc(it.q)}</div>
+      <div><button data-act="show">Show answer</button><button data-act="run">Run answer</button><button class="alt" data-act="load">Load in editor</button></div>
+      <pre hidden>${esc(it.a)}</pre>
+      <div class="res"></div>
+    </div>`).join('');
+}
+
+document.addEventListener('click', e => {
+  const t = e.target;
+  if (t.dataset.g !== undefined && t.closest('#tabs')) { current = +t.dataset.g; renderBank(); return; }
+  if (t.dataset.t) { $('#sql').value = `SELECT * FROM "${t.dataset.t}" LIMIT 200;`; $('#out').innerHTML = runSql($('#sql').value); return; }
+  const act = t.dataset.act;
+  if (!act) return;
+  const card = t.closest('.card');
+  const item = BANK[+card.dataset.g].items[+card.dataset.i];
+  if (act === 'show') { const p = card.querySelector('pre'); p.hidden = !p.hidden; }
+  if (act === 'run') { card.querySelector('.res').innerHTML = runSql(item.a); }
+  if (act === 'load') { $('#sql').value = item.a; $('#sql').scrollIntoView({behavior: 'smooth'}); }
+});
+
+$('#run').onclick = () => { $('#out').innerHTML = runSql($('#sql').value); renderTables(); };
+$('#clear').onclick = () => { $('#out').innerHTML = ''; };
+$('#sql').addEventListener('keydown', e => { if (e.ctrlKey && e.key === 'Enter') $('#run').click(); });
+$('#reset').onclick = () => { db.close(); boot(); $('#out').innerHTML = '<div class="ok">Database reset.</div>'; };
+
+initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}` }).then(SQL => {
+  window.SQL = SQL;
+  boot();
+  renderBank();
+}).catch(e => {
+  document.body.insertAdjacentHTML('afterbegin', `<div class="err" style="padding:12px">Engine failed to load. Check internet. ${esc(e.message)}</div>`);
+});
+</script>
+</body>
+</html>
